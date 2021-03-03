@@ -1,6 +1,10 @@
 package com.sagardev.reactivespring.model;
 
 import lombok.*;
+import org.springframework.security.core.GrantedAuthority;
+
+import java.util.Collection;
+import java.util.List;
 
 @AllArgsConstructor
 @Getter
@@ -11,12 +15,13 @@ public class JwtResponse {
     private  String jwt;
     private String status;
     private String message;
-    private String role;
+    private Collection<? extends GrantedAuthority> role;
 
 
     public JwtResponse(String status, String message) {
         this.status = status;
         this.message = message;
     }
+
 
 }

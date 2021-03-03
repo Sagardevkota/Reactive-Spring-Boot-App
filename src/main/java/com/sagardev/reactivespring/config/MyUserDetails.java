@@ -1,31 +1,31 @@
 package com.sagardev.reactivespring.config;
 
 import com.sagardev.reactivespring.model.User;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-
 import java.util.*;
 
-
+@Data
+@Slf4j
 public class MyUserDetails implements UserDetails {
 
-    private User user;
-
-    private final List<GrantedAuthority> grantedAuthorityList = Collections.singletonList(new GrantedAuthority() {
-        @Override
-        public String getAuthority() {
-            return user.getRole();
-        }
-    });
+    private final User user ;
 
     public MyUserDetails(User user){
         this.user = user;
-
     }
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return this.grantedAuthorityList;
+        List<GrantedAuthority> grantedAuthorityList = new ArrayList<>();
+        Arrays.stream(user.getRole().split(",")) //user can have ADMIN,MODERATOR
+                .distinct()
+                .forEach(role->grantedAuthorityList.add((GrantedAuthority) () -> role));
+
+        return grantedAuthorityList;
     }
 
     @Override

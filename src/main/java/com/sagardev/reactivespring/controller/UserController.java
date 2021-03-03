@@ -11,17 +11,18 @@ import com.sagardev.reactivespring.util.JwtUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.security.Principal;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -57,92 +58,32 @@ public class UserController {
         return userService.getUserById(userId);
     }
 
-    @PreAuthorize("hasAuthority('ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ADMIN','MODERATOR')")
     @GetMapping("/users")
     Flux<User> getUserById(){
-
         return userService.getUsers();
     }
 
-    private List<String> getRolesofLoggedInUser(Principal principal){
-      return getLoggedInUser(principal)
-              .single()
-                .map(user -> Collections.singletonList(user.getRole())).block();
-    }
-
-    private Mono<User> getLoggedInUser(Principal principal){
-
-        return userService.getUserByUserName(principal.getName());
-    }
-
-
     //API for admin
     @PreAuthorize("hasAuthority('ADMIN')")
-    @GetMapping("/users/address/{userName}")
-    Mono<String> getUserAddress(@PathVariable String userName,Principal principal){
-        if (!principal.getName().equals(userName))
-            return Mono.error(new ValidationException("UNAUTHORIZED USER"));
-        return userService.getUserAddress(userName);
-
+    @GetMapping("/users/address")
+    Mono<String> getUserAddress(){
+        return userService.getUserAddress((Mono<Object>)getCurrentUser());
     }
 
-    @RequestMapping(value = "login",method = RequestMethod.POST)
-    public Mono<JwtResponse> createAuthenticationToken(@RequestBody User user) {
+    @RequestMapping(value = "/login",method = RequestMethod.POST)
+    public Mono<ResponseEntity<JwtResponse>> createAuthenticationToken(@RequestBody User user) {
 
-        Mono<UserDetails> userDetailsMono = userDetailsService.findByUsername(user.getUserName());
+        return userDetailsService.findByUserName(user.getUserName()).map((userDetails) -> {
 
-        Mono<Authentication> authenticationMono = authenticationManager
-                .authenticate(new UsernamePasswordAuthenticationToken(user.getUserName(), user.getPassword()));
-
-//
-//       return authenticationMono.zipWith(userDetailsMono)
-//                .flatMap(objects -> {
-//                    objects.mapT1(authentication -> {
-//                        if (authentication.isAuthenticated()){
-//                            objects.mapT2(userDetails -> {
-//
-//                                JwtResponse jwtResponse = JwtResponse.builder()
-//                                        .jwt(jwtUtil.generateToken(userDetails))
-//                                        .status("200 OK")
-//                                        .message("Login Successful")
-//                                        .role(userDetails.getAuthorities().toString())
-//                                        .build();
-//                                logger.info(jwtResponse.toString());
-//                                return Mono.just(jwtResponse);
-//                            });
-//                        }
-//                        return Mono.just(new JwtResponse("403","Error"));
-//                    }
-//
-//                    );
-//
-//                    return Mono.just(new JwtResponse("403","Error"));
-//                });
-
-
-       return Mono.zip(authenticationMono, userDetailsMono).flatMap(data->{
-
-           Authentication authentication = data.getT1();
-
-            if (authentication.isAuthenticated())
-            {
-                UserDetails userDetails = data.getT2();
-                JwtResponse jwtResponse = JwtResponse.builder()
-                        .jwt(jwtUtil.generateToken(userDetails))
-                        .status("200 Ok")
-                        .role(authentication.getAuthorities().toString())
-                        .message("Login Successful")
-                        .build();
-
-                return Mono.just(jwtResponse);
-
+            if (bCryptPasswordEncoder.matches(user.getPassword(),userDetails.getPassword())) {
+                String token = jwtUtil.generateToken(userDetails);
+                return ResponseEntity.ok(new JwtResponse(token,"200 Ok","Login successful",
+                        userDetails.getAuthorities()));
+            } else {
+                return ResponseEntity.badRequest().body(new JwtResponse("409 Conflict","Incorrect Password"));
             }
-            else
-                return Mono.just(new JwtResponse("403 Error","Login unsuccessful"));
-
-
-        });
-
+        }).defaultIfEmpty(ResponseEntity.status(HttpStatus.UNAUTHORIZED).build());
 
 
 
@@ -163,5 +104,22 @@ public class UserController {
                     );
 
     }
+
+    @GetMapping("/posts")
+    Mono<List<String>> getPosts(){
+        return Mono.just(Arrays.asList("apple","ball"));
+    }
+
+
+
+    @GetMapping("/current-user")
+    public Mono<Object> getCurrentUser() {
+     return ReactiveSecurityContextHolder.getContext()
+             .map(SecurityContext::getAuthentication)
+             .map(Authentication::getPrincipal);
+
+    }
+
+
 
 }

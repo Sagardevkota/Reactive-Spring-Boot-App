@@ -1,7 +1,11 @@
 package com.sagardev.reactivespring.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.annotation.Transient;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -13,10 +17,10 @@ import javax.validation.constraints.NotBlank;
 
 @Document(collection = "users")
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
-
-    @Transient
-    public static final String db_sequence = "user_sequence";
 
     @MongoId
     @Id
@@ -27,7 +31,7 @@ public class User {
     private String userName;
 
     @NotBlank(message = "Password cant be empty")
-    @Min(value = 5,message = "Password shoudl be at least 5 characters")
+    @Min(value = 5,message = "Password should be at least 5 characters")
 
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
@@ -35,6 +39,5 @@ public class User {
     private String address;
     private String role;
     private boolean active;
-
 
 }

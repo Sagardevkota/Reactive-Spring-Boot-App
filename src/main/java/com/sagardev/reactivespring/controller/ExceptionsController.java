@@ -54,8 +54,8 @@ public class ExceptionsController {
     //global exception handler
     @ExceptionHandler(value = Exception.class)
     public ResponseEntity<?> handleException(Exception exception) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new JsonResponse(String.valueOf(HttpStatus.INTERNAL_SERVER_ERROR),exception.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new JsonResponse(String.valueOf(HttpStatus.UNAUTHORIZED),exception.getMessage()));
     }
 
     @ExceptionHandler(value = NullPointerException.class)

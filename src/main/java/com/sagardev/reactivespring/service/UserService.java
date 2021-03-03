@@ -33,10 +33,10 @@ public class UserService {
         userRepository.save(user).subscribe();
     }
 
-    public Mono<String> getUserAddress(String userName) {
-        return userRepository.findByUserName(userName)
-                .map(User::getAddress);
-
+    public Mono<String> getUserAddress(Mono<Object> userName) {
+        return userName.map(o -> userRepository.findByUserName((String) o))
+                .flatMap(userMono -> userMono
+                        .map(User::getAddress));
     }
 
 

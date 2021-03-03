@@ -1,6 +1,7 @@
 package com.sagardev.reactivespring.util;
 
 
+import com.sagardev.reactivespring.config.MyUserDetails;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -44,7 +45,7 @@ public class JwtUtil {
     }
 
     //generate token for user
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(MyUserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
         return doGenerateToken(claims, userDetails);
     }
@@ -55,8 +56,8 @@ public class JwtUtil {
     //2. Sign the JWT using the HS512 algorithm and secret key.
     //3. According to JWS Compact Serialization(https://tools.ietf.org/html/draft-ietf-jose-json-web-signature-41#section-3.1)
     //   compaction of the JWT to a URL-safe string
-    private String doGenerateToken(Map<String, Object> claims, UserDetails userDetails) {
-
+    private String doGenerateToken(Map<String, Object> claims, MyUserDetails userDetails) {
+        claims.put("role",userDetails.getAuthorities());
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(userDetails.getUsername())
@@ -68,10 +69,14 @@ public class JwtUtil {
     //validate token
     public String validateToken(String token, UserDetails userDetails) {
         final String username = getUsernameFromToken(token);
-        if (!username.equals(userDetails.getUsername()))
-            return "Incorrect username";
-        if (isTokenExpired(token))
-            return "Token expired";
-        else  return "ok";
+
+
+           if (!username.equals(userDetails.getUsername()))
+               return "Incorrect username";
+           if (isTokenExpired(token))
+               return "Token expired";
+           else  return "ok";
+
+
     }
 }
